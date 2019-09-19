@@ -57,11 +57,11 @@ cv::Mat LeakyRelu(cv::Mat &x,const float a /*= 0.2f*/)
 cv::Mat DerivativeFunction(cv::Mat& fx, std::string func_type)
 {
 	cv::Mat dx;
-	if (func_type == "sigmoid")
+	if (func_type == "Sigmoid")
 	{
 		dx = Sigmoid(fx).mul((1 - Sigmoid(fx)));
 	}
-	if (func_type == "tanh")
+	if (func_type == "Tanh")
 	{
 		cv::Mat tanh_2;
 		pow(Tanh(fx), 2., tanh_2);
@@ -112,6 +112,7 @@ void calcLoss(cv::Mat &output, cv::Mat &target, cv::Mat &output_error, float &lo
 		std::cout << "Can't find the target cv::Matrix" << std::endl;
 		return;
 	}
+
 	output_error = target - output;
 	cv::Mat err_sqrare;
 	pow(output_error, 2., err_sqrare);

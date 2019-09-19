@@ -32,8 +32,23 @@ namespace BP
 
 		//激活公式
 		std::string activation_function = "Sigmoid";
+			
+		double learning_rate;
 
+		double accuracy = 0;
 
+		//反向传播误差插值
+		std::vector<cv::Mat> delta_err;
+
+		cv::Mat output_error;
+
+		cv::Mat target;
+
+		std::vector<double> loss_vec;
+
+		float fine_tune_factor = 1.01f;
+
+		float loss;
 	public:
 		NetFrame();
 		~NetFrame();
@@ -59,6 +74,24 @@ namespace BP
 		//反向传播，调用updateWeights()函数更新权值
 		void backward();
 
+
+		//Train,use loss_threshold
+		void train(cv::Mat input, cv::Mat target_, float loss_threshold, bool draw_loss_curve = false);
+
+		//Test
+		void test(cv::Mat &input, cv::Mat &target_);
+
+		//Predict,just one sample
+		int predict_one(cv::Mat &input);
+
+		//Predict,more  than one samples
+		std::vector<int> predict(cv::Mat &input);
+
+		//Save model;
+		void save(std::string filename);
+
+		//Load model;
+		void load(std::string filename);
 
 	protected:
 			
