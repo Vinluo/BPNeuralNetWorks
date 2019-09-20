@@ -155,9 +155,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Data\sigmoid_test.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Data\sigmoid_train.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="src\Function\Function.cpp" />
     <ClCompile Include="src\NetWorks.cpp" />
     <ClCompile Include="src\NetFrame.cpp" />
+    <ClCompile Include="src\test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Data\sample_submission.csv" />
@@ -167,6 +174,11 @@
   <ItemGroup>
     <ClInclude Include="src\Function\Function.h" />
     <ClInclude Include="src\NetFrame.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="Data\input_label_0-9_1000.xml" />
+    <Xml Include="Data\input_label_1000.xml" />
+    <Xml Include="Data\input_label_500.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

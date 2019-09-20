@@ -1,6 +1,11 @@
 #include "NetFrame.h"
 #include "Function\Function.h"
 
+BP::NetFrame::NetFrame()
+{
+
+}
+
 void BP::NetFrame::initNet(std::vector<int> Layer_neuron_num_)
 {
 	Layer_neuron_num = Layer_neuron_num_;
@@ -38,7 +43,7 @@ void BP::NetFrame::initWeights(int type /*= 0*/, double a/*=0.*/, double b /*=0.
 
 
 //偏置初始化是给所有的偏置赋相同的值。这里用Scalar对象来给矩阵赋值。
-void BP::NetFrame::initBias(cv::Scalar& Bias_)
+void BP::NetFrame::initBias(cv::Scalar Bias_)
 {
 
 	for (int i = 0; i < Bias.size(); i++)
@@ -53,7 +58,7 @@ void BP::NetFrame::initBias(cv::Scalar& Bias_)
 //前向运算
 void BP::NetFrame::forward()
 {
-	for (int i = 0; i < Layer_neuron_num.size(); i++)
+	for (int i = 0; i < Layer_neuron_num.size()-1; i++)
 	{
 		//线型运算可以用Y = WX + b
 		cv::Mat Product = Weights[i] * Layer[i] + Bias[i];
@@ -120,7 +125,7 @@ void BP::NetFrame::deltaError()
 	delta_err.resize(Layer.size() - 1);
 	for (int i = delta_err.size() - 1; i >= 0; i--)
 	{
-		delta_err[i].create(Layer[i + 1].size(), Layer[t + 1].type());
+		delta_err[i].create(Layer[i + 1].size(), Layer[i + 1].type());
 		//cv::Mat dx = layer[i+1].mul(1 - layer[i+1]);
 		cv::Mat dx = DerivativeFunction(Layer[i + 1], activation_function);
 		//Output layer delta error
@@ -131,9 +136,9 @@ void BP::NetFrame::deltaError()
 		else
 		{
 			cv::Mat	weight = Weights[i];
-			cv::Mat weight_t = weight[i].t();
+			cv::Mat weight_t = Weights[i].t();
 			cv::Mat delta_err_1 = delta_err[i];
-			delta_err[i] = dx.mul((Weights[i + 1]).t()*delta_err[i + 1]));
+			delta_err[i] = dx.mul((Weights[i + 1]).t()*delta_err[i + 1]);
 		}
 	}
 }
@@ -150,6 +155,7 @@ void BP::NetFrame::updateWeights()
 
 
 //训练流程
+//训练结束后得到的权重矩阵就是要得到的训练模型
 void BP::NetFrame::train(cv::Mat input, cv::Mat target_, float loss_threshold, bool draw_loss_curve /*= false*/)
 {
 
@@ -190,7 +196,7 @@ void BP::NetFrame::train(cv::Mat input, cv::Mat target_, float loss_threshold, b
 	}
 	else if (input.rows == (Layer[0].rows) && input.cols > 1)
 	{
-		double batch_loss = loss_threshold + 0.01;
+		double batch_loss = loss_threshold + 0.01f;
 		int epoch = 0;
 		//如果loss值小于设定的阈值loss_threshold，则进行反向传播更新阈值；
 		//重复以上过程直到loss小于等于设定的阈值。
@@ -223,6 +229,7 @@ void BP::NetFrame::train(cv::Mat input, cv::Mat target_, float loss_threshold, b
 			}
 			if (epoch % 100 == 0)
 			{
+				//每一百层对学习率进行提升
 				learning_rate *= fine_tune_factor;
 			}
 		}
@@ -237,6 +244,15 @@ void BP::NetFrame::train(cv::Mat input, cv::Mat target_, float loss_threshold, b
 }
 
 
+
+//test()的目的将train函数执行后得到模型，通过未通过模型训练的数据进行一次测试
+//通过这个过程测试结果与实际结果进行比对，从而来判断我们模型的正确
+//test()的步骤大致如下几步：
+//
+//
+//
+//
+
 void BP::NetFrame::test(cv::Mat &input, cv::Mat &target_)
 {
 	if (input.empty())
@@ -245,11 +261,11 @@ void BP::NetFrame::test(cv::Mat &input, cv::Mat &target_)
 		return;
 	}
 	std::cout << std::endl << "Predict,begin!" << std::endl;
-
+	//用一组样本逐个输入神经网络
+	//单次模型预测
 	if (input.rows == (Layer[0].rows) && input.cols == 1)
 	{
 		int predict_number = predict_one(input);
-
 		cv::Point target_maxLoc;
 		minMaxLoc(target_, NULL, NULL, NULL, &target_maxLoc, cv::noArray());
 		int target_number = target_maxLoc.y;
@@ -295,24 +311,109 @@ void BP::NetFrame::test(cv::Mat &input, cv::Mat &target_)
 
 int BP::NetFrame::predict_one(cv::Mat &input)
 {
+	if (input.rows == (Layer[0].rows) && input.cols == 1)
+	{
+		Layer[0] = input;
+		forward();
 
+		cv::Mat Layer_out = Layer[Layer.size() - 1];
+		cv::Point predict_maxLoc;
+
+		minMaxLoc(Layer_out, NULL, NULL, NULL, &predict_maxLoc, cv::noArray());
+		return predict_maxLoc.y;
+	}
+	else
+	{
+		return -1;
+	}
 }
 
 
 std::vector<int> BP::NetFrame::predict(cv::Mat &input)
 {
-
+	std::vector<int> predicted_labels;
+	if (input.rows == (Layer[0].rows) && input.cols > 1)
+	{
+		for (int i = 0; i < input.cols; ++i)
+		{
+			cv::Mat sample = input.col(i);
+			int predicted_label = predict_one(sample);
+			predicted_labels.push_back(predicted_label);
+		}
+	}
+	return predicted_labels;
 }
 
 
 void BP::NetFrame::save(std::string filename)
 {
+	cv::FileStorage model(filename, cv::FileStorage::WRITE);
+	model << "layer_neuron_num" << Layer_neuron_num;
+	model << "learning_rate" << learning_rate;
+	model << "activation_function" << activation_function;
 
+	for (int i = 0; i < Weights.size(); i++)
+	{
+		std::string weight_name = "weight_" + std::to_string(i);
+		model << weight_name << Weights[i];
+	}
+	model.release();
 }
 
 
 void BP::NetFrame::load(std::string filename)
 {
+	cv::FileStorage fs;
+	fs.open(filename, cv::FileStorage::READ);
+	cv::Mat input_, target_;
 
+	fs["layer_neuron_num"] >> Layer_neuron_num;
+	initNet(Layer_neuron_num);
+
+	for (int i = 0; i < Weights.size(); i++)
+	{
+		std::string weight_name = "weight_" + std::to_string(i);
+		fs[weight_name] >> Weights[i];
+	}
+
+	fs["learning_rate"] >> learning_rate;
+	fs["activation_function"] >> activation_function;
+
+	fs.release();
+}
+
+
+void BP::draw_curve(cv::Mat& board, std::vector<double> points)
+{
+	cv::Mat board_(620, 1000, CV_8UC3, cv::Scalar::all(200));
+	board = board_;
+	cv::line(board, cv::Point(0, 550), cv::Point(1000, 550), cv::Scalar(0, 0, 0), 2);
+	cv::line(board, cv::Point(50, 0), cv::Point(50, 1000), cv::Scalar(0, 0, 0), 2);
+
+	for (size_t i = 0; i < points.size() - 1; i++)
+	{
+		cv::Point pt1(50 + i * 2, (int)(548 - points[i]));
+		cv::Point pt2(50 + i * 2 + 1, (int)(548 - points[i + 1]));
+		cv::line(board, pt1, pt2, cv::Scalar(0, 0, 255), 2);
+		if (i >= 1000)
+		{
+			return;
+		}
+	}
+	cv::imshow("Loss", board);
+	cv::waitKey(1);
+}
+
+
+void BP::get_input_label(std::string filename, cv::Mat& input, cv::Mat& label, int sample_num, int start /*= 0*/)
+{
+	cv::FileStorage fs;
+	fs.open(filename, cv::FileStorage::READ);
+	cv::Mat input_, target_;
+	fs["input"] >> input_;
+	fs["target"] >> target_;
+	fs.release();
+	input = input_(cv::Rect(start, 0, sample_num, input_.rows));
+	label = target_(cv::Rect(start, 0, sample_num, target_.rows));
 }
 
